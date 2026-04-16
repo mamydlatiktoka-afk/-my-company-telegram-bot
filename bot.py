@@ -11,20 +11,42 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Загрузка ключей
-TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+# Загрузка ключей с альтернативными именами
+TELEGRAM_BOT_TOKEN = (
+    os.environ.get('TELEGRAM_BOT_TOKEN') or 
+    os.environ.get('TELEGRAM_TOKEN') or 
+    os.environ.get('BOT_TOKEN')
+)
 
-# Проверка ключей
+OPENAI_API_KEY = (
+    os.environ.get('OPENAI_API_KEY') or 
+    os.environ.get('OPENAI_KEY') or 
+    os.environ.get('AI_KEY')
+)
+
+# Детальная проверка ключей
+logger.info("=== ПРОВЕРКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ ===")
+logger.info(f"TELEGRAM_BOT_TOKEN: {'***' if TELEGRAM_BOT_TOKEN else 'НЕТ'}")
+logger.info(f"OPENAI_API_KEY: {'***' if OPENAI_API_KEY else 'НЕТ'}")
+
+# Выведем все переменные окружения для диагностики (без значений)
+all_vars = dict(os.environ)
+logger.info("=== ВСЕ ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ (имена) ===")
+for var_name in sorted(all_vars.keys()):
+    if any(keyword in var_name.upper() for keyword in ['TEL', 'OPEN', 'API', 'KEY', 'BOT']):
+        logger.info(f"Найдена переменная: {var_name}")
+
 if not TELEGRAM_BOT_TOKEN:
-    logger.error("❌ ОШИБКА: Не найден TELEGRAM_BOT_TOKEN!")
+    logger.error("❌ КРИТИЧЕСКАЯ ОШИБКА: Не найден TELEGRAM_BOT_TOKEN!")
+    logger.error("Проверьте настройки Variables в Railway")
     exit(1)
 
 if not OPENAI_API_KEY:
-    logger.error("❌ ОШИБКА: Не найден OPENAI_API_KEY!")
+    logger.error("❌ КРИТИЧЕСКАЯ ОШИБКА: Не найден OPENAI_API_KEY!")
+    logger.error("Проверьте настройки Variables в Railway")
     exit(1)
 
-logger.info("✅ Ключи загружены")
+logger.info("✅ Все ключи успешно загружены")
 
 # Инициализация клиента OpenAI
 client = OpenAI(api_key=OPENAI_API_KEY)
@@ -35,7 +57,8 @@ knowledge_base = []
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработка команды /start"""
     try:
-        await update.message.reply_text('Привет! Я ваш ИИ-помощник. Отправьте мне текст для обучения, затем задавайте вопросы!')
+        await update.message.reply_text('✅ Бот работает! Отправьте текст для обучения, затем задавайте вопросы.')
+        logger.info("Команда /start выполнена успешно")
     except Exception as e:
         logger.error(f"Ошибка в start: {e}")
 
@@ -58,7 +81,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Если база пуста
         if not knowledge_base:
-            await update.message.reply_text("База пуста. Отправьте информацию для обучения.")
+            await update.message.reply_text("📝 База пуста. Отправьте информацию для обучения.")
             return
 
         # Обработка вопроса
@@ -80,23 +103,26 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         answer = response.choices[0].message.content
         await update.message.reply_text(answer)
+        logger.info("Ответ отправлен успешно")
 
     except Exception as e:
-        logger.error(f"Ошибка: {e}")
-        await update.message.reply_text("⚠️ Ошибка обработки")
+        logger.error(f"Ошибка обработки сообщения: {e}")
+        await update.message.reply_text("⚠️ Ошибка обработки запроса")
 
 def main():
     """Запуск бота"""
     try:
+        logger.info("=== ЗАПУСК БОТА ===")
+        
         app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
         app.add_handler(CommandHandler("start", start))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
         
-        logger.info("Бот запущен")
+        logger.info("✅ Бот запущен и готов к работе")
         app.run_polling()
         
     except Exception as e:
-        logger.error(f"Ошибка запуска: {e}")
+        logger.error(f"❌ Фатальная ошибка при запуске бота: {e}")
 
 if __name__ == '__main__':
     main()

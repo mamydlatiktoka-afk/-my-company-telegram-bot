@@ -63,43 +63,4 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         # Это вопрос - обрабатываем
-        context_text = "\n".join(knowledge_base[-3:])  # Берем 3 последних факта
-
-        prompt = f"""Ты - ассистент. Отвечай только на основе информации ниже.
-Если ответа нет в информации, скажи "Не знаю".
-
-Информация:
-{context_text}
-
-Вопрос: {user_text}
-
-Ответ:"""
-
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=300
-        )
-        
-        answer = response.choices[0].message.content
-        await update.message.reply_text(answer)
-
-    except Exception as e:
-        logger.error(f"Ошибка: {str(e)}")
-        await update.message.reply_text("⚠️ Произошла ошибка при обработке запроса.")
-
-def main():
-    """Запуск бота"""
-    try:
-        application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-        application.add_handler(CommandHandler("start", start))
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-        
-        logger.info("Бот запускается...")
-        application.run_polling()
-        
-    except Exception as e:
-        logger.error(f"Фатальная ошибка при запуске бота: {e}")
-
-if __name__ == '__main__':
-    main()
+        context_text = "\n".join(knowledge_base[-3:])  # Берем 3 послед
